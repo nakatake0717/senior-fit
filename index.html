@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>60代向け求人 AI スコアリング</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 2rem auto;
+            max-width: 760px;
+            line-height: 1.6;
+        }
+
+        textarea {
+            width: 100%;
+            height: 160px;
+            padding: .8rem;
+            font-size: 1rem;
+        }
+
+        button {
+            padding: .6rem 1.2rem;
+            font-size: 1rem;
+            margin-top: .6rem;
+            cursor: pointer;
+        }
+
+        #result {
+            margin-top: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .reasons {
+            margin-top: .6rem;
+            color: #444;
+        }
+
+        .ok {
+            color: #007bff;
+            font-weight: 700;
+        }
+
+        .err {
+            color: #c0392b;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>60代向け求人 AI スコアリング</h1>
+    <p>求人票の文章を入力して「AIで判定」を押すと、60代向けスコア（0〜100点）を返します。</p>
+
+    <label for="jobText">求人票の本文</label>
+    <textarea id="jobText" placeholder="例）シニア歓迎、短時間勤務、軽作業です。"></textarea>
+    <button id="btn">AIで判定</button>
+
+    <div id="result"></div>
+
+    <script>
+        const API_URL = "https://xxxx.ngrok-free.app/predict"; // ← Colabの最新URLに差し替え
+        const API_KEY = "change-me-please";                     // ← セル2と合わせる
+
+        document.getElementById("btn").addEventListener("click", runAI);
+
+        async function runAI() {
+            const result = document.getElementById("result");
+            const text = document.getElementById("jobText").value.trim();
+            if (!text) { result.innerHTML = '<span class="err">文章を入力してください。</span>'; return; }
+            result.textContent = "判定中…";
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-api-key": API_KEY
+                    },
+                    body: JSON.stringify({ text })
+                });
+                if (!res.ok) {
+                    const t = await res.text();
+                    throw new Error(`API Error ${res.status}: ${t}`);
+                }
+                const data = await res.json();
+                const score100 = Math.round(data.score * 100);
+                const reasons = (data.reasons || []).map(r => `<li>${escapeHtml(r)}</li>`).join("");
+                result.innerHTML =
+                    `60代向けスコア： <span class="ok">${score100} 点</span>` +
+                    (reasons ? `<ul class="reasons">${reasons}</ul>` : "");
+            } catch (err) {
+                console.error(err);
+                result.innerHTML = `<span class="err">${err.message}</span>`;
+            }
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+    </script>
+
+</body>
+
+</html>
